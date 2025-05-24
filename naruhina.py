@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 from telegram import Update
+from telegram.constants import ChatAction
 from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
@@ -29,20 +30,18 @@ story_sequence = [
 # Track active group chats and their story states
 group_states = {}
 
-# Start story in a new group
+# Detect group and start story if new
 async def detect_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     if chat.type in ["group", "supergroup"] and chat.id not in group_states:
         logging.info(f"New group detected: {chat.id}")
-        group_states[chat.id] = {
-            "story_index": 0
-        }
-        await context.bot.send_message(chat_id=chat.id, text="**Naruto Mission Mode Activated!**")
-        asyncio.create_task(chat_loop(chat.id, context.application.bot))
+        group_states[chat.id] = {"story_index": 0}
 
-# Story loop per group
-async def chat_loop(chat_id, bot1):
-    bot2 = ApplicationBuilder().token(BOT2_TOKEN).build().bot
+        await context.bot.send_message(chat_id=chat.id, text="**Naruto Mission Mode Activated!**")
+        asyncio.create_task(chat_loop(chat.id, context.application.bot, context.application.bot_data["bot2"]))
+
+# Story loop
+async def chat_loop(chat_id, bot1, bot2):
     await asyncio.sleep(2)
 
     while True:
@@ -53,24 +52,25 @@ async def chat_loop(chat_id, bot1):
         index = state["story_index"]
         naruto_line, sakura_line = story_sequence[index]
 
-        await bot1.send_chat_action(chat_id=chat_id, action="typing")
+        await bot1.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         await asyncio.sleep(2)
         await bot1.send_message(chat_id=chat_id, text=naruto_line)
 
         await asyncio.sleep(5)
 
-        await bot2.send_chat_action(chat_id=chat_id, action="typing")
+        await bot2.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         await asyncio.sleep(2)
         await bot2.send_message(chat_id=chat_id, text=sakura_line)
 
         state["story_index"] = (index + 1) % len(story_sequence)
-
         await asyncio.sleep(6)
 
+# Main function
 async def main():
     app = ApplicationBuilder().token(BOT1_TOKEN).build()
-    app.add_handler(MessageHandler(filters.ALL, detect_chat))
+    app.bot_data["bot2"] = ApplicationBuilder().token(BOT2_TOKEN).build().bot
 
+    app.add_handler(MessageHandler(filters.ALL, detect_chat))
     logging.info("Bot is running. Add it to any group and send a message to begin.")
     await app.run_polling()
 

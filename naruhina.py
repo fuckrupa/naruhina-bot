@@ -1033,7 +1033,7 @@ async def chat_loop(bot1, bot2):
         await asyncio.sleep(2)
         await bot1.send_message(chat_id=group_chat_id, text=naruto_line)
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(6)
 
         await bot2.send_chat_action(chat_id=group_chat_id, action="typing")
         await asyncio.sleep(2)

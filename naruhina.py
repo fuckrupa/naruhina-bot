@@ -56,7 +56,7 @@ story_sequence = [
 
 ("yo look at that huge flower 😮", "woah it smells sooo sweet 🥹 wanna pick one?"),
 
-("nah imma leave it... wild things are better untouched 🙃", "*looks at him* u really think that?",
+("nah imma leave it... wild things are better untouched 🙃", "*looks at him* u really think that?"),
 
 ("yeah… like u… wild n beautiful 😌", "*face turns red* stoppp u makin me shy 😖"),
 

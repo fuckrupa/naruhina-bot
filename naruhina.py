@@ -38,7 +38,6 @@ async def detect_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "story_index": 0
         }
         await context.bot.send_message(chat_id=chat.id, text="**Naruto Mission Mode Activated!**")
-        # Start story loop for this group
         asyncio.create_task(chat_loop(chat.id, context.application.bot))
 
 # Story loop per group
@@ -49,24 +48,21 @@ async def chat_loop(chat_id, bot1):
     while True:
         state = group_states.get(chat_id)
         if state is None:
-            break  # Group removed or error
+            break
 
         index = state["story_index"]
         naruto_line, sakura_line = story_sequence[index]
 
-        # Naruto speaks
         await bot1.send_chat_action(chat_id=chat_id, action="typing")
         await asyncio.sleep(2)
         await bot1.send_message(chat_id=chat_id, text=naruto_line)
 
         await asyncio.sleep(5)
 
-        # Sakura replies
         await bot2.send_chat_action(chat_id=chat_id, action="typing")
         await asyncio.sleep(2)
         await bot2.send_message(chat_id=chat_id, text=sakura_line)
 
-        # Update index
         state["story_index"] = (index + 1) % len(story_sequence)
 
         await asyncio.sleep(6)
@@ -79,4 +75,11 @@ async def main():
     await app.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except RuntimeError as e:
+        if str(e).startswith("This event loop is already running"):
+            loop = asyncio.get_event_loop()
+            loop.create_task(main())
+        else:
+            raise

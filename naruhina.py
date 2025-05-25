@@ -200,7 +200,7 @@ async def chat_loop(bot1, bot2):
         story_index += 1
         await asyncio.sleep(6)
 
-# Register commands to command menu
+# Register commands
 async def set_commands(app):
     commands = [
         BotCommand("start", "Show bot intro and links"),
@@ -209,26 +209,29 @@ async def set_commands(app):
     ]
     await app.bot.set_my_commands(commands)
 
-# Run each app
+# Run bot application
 async def run_app(app):
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
     await app.updater.idle()
 
-# Main function
+# Main logic
 async def main():
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()
 
+    # Link bots
     app1._other_bot = app2.bot
     app2._other_bot = app1.bot
 
+    # Add handlers
     for app in (app1, app2):
         app.add_handler(CommandHandler("start", start_command))
         app.add_handler(CommandHandler("fuck", start_chat))
         app.add_handler(CommandHandler("cum", stop_chat))
 
+    # Set commands and run both apps
     await asyncio.gather(
         set_commands(app1),
         set_commands(app2),
@@ -236,5 +239,9 @@ async def main():
         run_app(app2)
     )
 
+# Entry point
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Bot stopped.")

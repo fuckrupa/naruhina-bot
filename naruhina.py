@@ -68,10 +68,12 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 # ----------------------------------------
 async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(f"[naruto_start_private] called; chat_type={update.effective_chat.type}")
+
+    # Only proceed if truly a private chat
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
-    # (These buttons could be anything you like; just reusing the examples.)
+    # Build the inline‐keyboard
     keyboard = [
         [
             InlineKeyboardButton("Updates", url="https://t.me/WorkGlows"),
@@ -86,6 +88,7 @@ async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
+    # Try sending the greeting+keyboard
     try:
         await update.message.reply_text(
             "Hey there! I'm Naruto Uzumaki 😁\n"
@@ -101,9 +104,13 @@ async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
 # Command: /start in PRIVATE for Hinata (app2)
 # ----------------------------------------
 async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info(f"[hinata_start_private] called; chat_type={update.effective_chat.type}")
+
+    # Only proceed if truly a private chat
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
+    # Build the inline‐keyboard
     keyboard = [
         [
             InlineKeyboardButton("Updates", url="https://t.me/WorkGlows"),
@@ -117,11 +124,17 @@ async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "Hi, I'm Hinata... ☺️\n"
-        "Add me and Naruto to a group to begin our story.",
-        reply_markup=reply_markup,
-    )
+
+    # Try sending the greeting+keyboard
+    try:
+        await update.message.reply_text(
+            "Hi, I'm Hinata... ☺️\n"
+            "Add me and Naruto to a group to begin our story.",
+            reply_markup=reply_markup,
+        )
+        logging.info("[hinata_start_private] reply sent successfully.")
+    except Exception as exc:
+        logging.error(f"[hinata_start_private] failed to send reply: {exc}")
 
 
 # ----------------------------------------
@@ -245,9 +258,9 @@ async def run_app(app):
 async def main():
     # Create two separate Application objects—one for Naruto, one for Hinata
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()  # Naruto
-    logging.info(f"Naruto starting with token prefix: {BOT1_TOKEN[:5]}...")
+    logging.info(f"Naruto starting with token prefix: {BOT1_TOKEN[:5]}…")
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()  # Hinata
-    logging.info(f"Hinata starting with token prefix: {BOT2_TOKEN[:5]}...")
+    logging.info(f"Hinata starting with token prefix: {BOT2_TOKEN[:5]}…")
 
     # Let each Application know about the other’s Bot instance
     app1._other_bot = app2.bot
@@ -269,7 +282,7 @@ async def main():
     # ─────────────────────────────────────────────────────────────────
     # Naruto’s /start and “any text” in PRIVATE
     app1.add_handler(
-        CommandHandler("start", naruto_start_private, filters=filters.ChatType.PRIVATE)
+        CommandHandler("start", naruto_start_private)
     )
     app1.add_handler(
         MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, naruto_private)
@@ -277,7 +290,7 @@ async def main():
 
     # Hinata’s /start and “any text” in PRIVATE
     app2.add_handler(
-        CommandHandler("start", hinata_start_private, filters=filters.ChatType.PRIVATE)
+        CommandHandler("start", hinata_start_private)
     )
     app2.add_handler(
         MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, hinata_private)

@@ -64,25 +64,39 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 
 # ----------------------------------------
-# Command: /start in private
-# Each bot will reply with its own intro + buttons
+# Command: /start in PRIVATE for Naruto (app1)
 # ----------------------------------------
-async def start_command_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Only respond in PRIVATE chats
+async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
-    bot_username = (await context.bot.get_me()).username.lower()
-    if "naruto" in bot_username:
-        greeting = (
-            "Hey there! I'm Naruto Uzumaki 😁\n"
-            "Add me and Hinata to a group to start our duet chat!"
-        )
-    else:
-        greeting = (
-            "Hi, I'm Hinata... ☺️\n"
-            "Add me and Naruto to a group to begin our story."
-        )
+    # (These buttons could be anything you like; just reusing the examples.)
+    keyboard = [
+        [
+            InlineKeyboardButton("Updates", url="https://t.me/WorkGlows"),
+            InlineKeyboardButton("Support", url="https://t.me/TheCryptoElders"),
+        ],
+        [
+            InlineKeyboardButton(
+                "Add Me To Your Group",
+                url=f"https://t.me/{(await context.bot.get_me()).username}?startgroup=true",
+            )
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Hey there! I'm Naruto Uzumaki 😁\n"
+        "Add me and Hinata to a group to start our duet chat!",
+        reply_markup=reply_markup,
+    )
+
+
+# ----------------------------------------
+# Command: /start in PRIVATE for Hinata (app2)
+# ----------------------------------------
+async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.type != ChatType.PRIVATE:
+        return
 
     keyboard = [
         [
@@ -92,16 +106,20 @@ async def start_command_private(update: Update, context: ContextTypes.DEFAULT_TY
         [
             InlineKeyboardButton(
                 "Add Me To Your Group",
-                url=f"https://t.me/{bot_username}?startgroup=true",
+                url=f"https://t.me/{(await context.bot.get_me()).username}?startgroup=true",
             )
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(greeting, reply_markup=reply_markup)
+    await update.message.reply_text(
+        "Hi, I'm Hinata... ☺️\n"
+        "Add me and Naruto to a group to begin our story.",
+        reply_markup=reply_markup,
+    )
 
 
 # ----------------------------------------
-# Command: /fuck — start the duo‐chat in THIS group (no announcement)
+# Command: /fuck — start the duo‐chat in THIS group (silent)
 # ----------------------------------------
 async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -112,7 +130,6 @@ async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # If we don’t already have this chat in our dict, set it up
     if chat_id not in group_chats or not group_chats[chat_id]["chat_started"]:
-        # Initialize per‐chat state
         group_chats[chat_id] = {
             "story_index": 0,
             "chat_started": True,
@@ -126,11 +143,11 @@ async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Launch the looping task for this group
         task = asyncio.create_task(chat_loop(chat_id, bot1, bot2))
         group_chats[chat_id]["task"] = task
-        # No reply_text here (silent start)
+        # → no reply_text (silent start)
 
 
 # ----------------------------------------
-# Command: /cum — stop the duo‐chat in THIS group (no announcement)
+# Command: /cum — stop the duo‐chat in THIS group (silent)
 # ----------------------------------------
 async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -144,30 +161,22 @@ async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         task = group_chats[chat_id]["task"]
         if task:
             task.cancel()
-        # Clean up the dict entry
         del group_chats[chat_id]
-        # No reply_text here (silent stop)
+        # → no reply_text (silent stop)
 
 
 # ----------------------------------------
 # The per‐group chat loop: alternates Naruto/Hinata lines until stopped
 # ----------------------------------------
 async def chat_loop(chat_id: int, bot1, bot2):
-    """
-    Repeatedly sends Naruto’s line, then Hinata’s line,
-    waiting between each, until chat_started is False.
-    """
-    # Small delay before starting
     await asyncio.sleep(2)
-
     while True:
-        # Check if this group’s chat is still running
         if not (chat_id in group_chats and group_chats[chat_id]["chat_started"]):
             break
 
         idx = group_chats[chat_id]["story_index"]
         if idx >= len(naruto_lines):
-            idx = 0  # wrap around
+            idx = 0
         group_chats[chat_id]["story_index"] = idx
 
         # Naruto typing… then message
@@ -182,10 +191,7 @@ async def chat_loop(chat_id: int, bot1, bot2):
         await asyncio.sleep(2)
         await bot2.send_message(chat_id=chat_id, text=hinata_lines[idx])
 
-        # Increment for next round
         group_chats[chat_id]["story_index"] = idx + 1
-
-        # Wait a bit before next cycle
         await asyncio.sleep(6)
 
 
@@ -239,11 +245,10 @@ async def main():
     app1._other_bot = app2.bot
     app2._other_bot = app1.bot
 
-    # ──────────────────────────────────────────────────────────────
-    # Group handlers (both bots share these)
-    # ──────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────
+    # Group handlers (both bots share these: /fuck and /cum)
+    # ─────────────────────────────────────────────────────────────────
     for app in (app1, app2):
-        # /fuck and /cum only in group chats
         app.add_handler(
             CommandHandler("fuck", start_chat, filters=filters.ChatType.GROUPS)
         )
@@ -251,26 +256,26 @@ async def main():
             CommandHandler("cum", stop_chat, filters=filters.ChatType.GROUPS)
         )
 
-    # ──────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────
     # Private‐chat handlers (each bot separately)
-    # ──────────────────────────────────────────────────────────────
-    # Naruto’s private‐chat /start and text handler
+    # ─────────────────────────────────────────────────────────────────
+    # Naruto’s /start and “any text” in PRIVATE
     app1.add_handler(
-        CommandHandler("start", start_command_private, filters=filters.ChatType.PRIVATE)
+        CommandHandler("start", naruto_start_private, filters=filters.ChatType.PRIVATE)
     )
     app1.add_handler(
         MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, naruto_private)
     )
 
-    # Hinata’s private‐chat /start and text handler
+    # Hinata’s /start and “any text” in PRIVATE
     app2.add_handler(
-        CommandHandler("start", start_command_private, filters=filters.ChatType.PRIVATE)
+        CommandHandler("start", hinata_start_private, filters=filters.ChatType.PRIVATE)
     )
     app2.add_handler(
         MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, hinata_private)
     )
 
-    # Register commands in each bot’s menu
+    # Register commands in each bot’s menu and run both
     await asyncio.gather(
         set_commands(app1),
         set_commands(app2),

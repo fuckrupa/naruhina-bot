@@ -1,7 +1,13 @@
 import os
 import asyncio
 import logging
-from telegram import Update, ChatMember
+from telegram import (
+    Update,
+    ChatMember,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    BotCommand
+)
 from telegram.constants import ChatAction
 from telegram.ext import (
     ApplicationBuilder,
@@ -25,7 +31,7 @@ chat_task = None
 
 # Naruto and Hinata dialogue
 naruto_lines = [
-    "heyyyyy hinataaa cutie 👋",
+    "heyyyyy hinataaa 👋",
     "how r u huh?? 😁",
     "aww that's good to hear! and yeah, i'm fine too hehe, just a bit lazy today 😅",
     "you been training again? 👀",
@@ -133,7 +139,25 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     member: ChatMember = await context.bot.get_chat_member(update.effective_chat.id, user_id)
     return member.status in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]
 
-# Start command (/fuck)
+# /start command
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton("Updates", url="https://t.me/YourChannelUsername"),
+            InlineKeyboardButton("Support", url="https://t.me/YourGroupChatLink"),
+        ],
+        [
+            InlineKeyboardButton("Add Me To Your Group", url="https://t.me/YourBotUsername?startgroup=true")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "Hey there! I'm a fun Naruto & Hinata chat bot.\n\n"
+        "Add me to your group and use /fuck to start the romantic convo!",
+        reply_markup=reply_markup
+    )
+
+# /fuck command (start chat)
 async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global chat_started, group_chat_id, chat_task
     if not await is_admin(update, context):
@@ -145,7 +169,7 @@ async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         bot2 = context.application._other_bot
         chat_task = asyncio.create_task(chat_loop(bot1, bot2))
 
-# Stop command (/cum)
+# /cum command (stop chat)
 async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global chat_started, chat_task
     if not await is_admin(update, context):
@@ -176,7 +200,16 @@ async def chat_loop(bot1, bot2):
         story_index += 1
         await asyncio.sleep(6)
 
-# Helper to run each bot
+# Register commands to command menu
+async def set_commands(app):
+    commands = [
+        BotCommand("start", "Show bot intro and links"),
+        BotCommand("fuck", "Start Naruto & Hinata chat"),
+        BotCommand("cum", "Stop the chat"),
+    ]
+    await app.bot.set_my_commands(commands)
+
+# Run each app
 async def run_app(app):
     await app.initialize()
     await app.start()
@@ -192,10 +225,16 @@ async def main():
     app2._other_bot = app1.bot
 
     for app in (app1, app2):
+        app.add_handler(CommandHandler("start", start_command))
         app.add_handler(CommandHandler("fuck", start_chat))
         app.add_handler(CommandHandler("cum", stop_chat))
 
-    await asyncio.gather(run_app(app1), run_app(app2))
+    await asyncio.gather(
+        set_commands(app1),
+        set_commands(app2),
+        run_app(app1),
+        run_app(app2)
+    )
 
 if __name__ == "__main__":
     asyncio.run(main())

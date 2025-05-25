@@ -67,6 +67,7 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 # Command: /start in PRIVATE for Naruto (app1)
 # ----------------------------------------
 async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info(f"[naruto_start_private] called; chat_type={update.effective_chat.type}")
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
@@ -84,11 +85,16 @@ async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
         ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "Hey there! I'm Naruto Uzumaki 😁\n"
-        "Add me and Hinata to a group to start our duet chat!",
-        reply_markup=reply_markup,
-    )
+
+    try:
+        await update.message.reply_text(
+            "Hey there! I'm Naruto Uzumaki 😁\n"
+            "Add me and Hinata to a group to start our duet chat!",
+            reply_markup=reply_markup,
+        )
+        logging.info("[naruto_start_private] reply sent successfully.")
+    except Exception as exc:
+        logging.error(f"[naruto_start_private] failed to send reply: {exc}")
 
 
 # ----------------------------------------
@@ -239,7 +245,9 @@ async def run_app(app):
 async def main():
     # Create two separate Application objects—one for Naruto, one for Hinata
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()  # Naruto
+    logging.info(f"Naruto starting with token prefix: {BOT1_TOKEN[:5]}...")
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()  # Hinata
+    logging.info(f"Hinata starting with token prefix: {BOT2_TOKEN[:5]}...")
 
     # Let each Application know about the other’s Bot instance
     app1._other_bot = app2.bot

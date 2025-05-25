@@ -1,15 +1,14 @@
 import os
 import asyncio
 import logging
-from telegram import Update
+from telegram import Update, ChatMember
 from telegram.ext import (
     ApplicationBuilder,
     ContextTypes,
-    MessageHandler,
-    filters,
+    CommandHandler,
 )
 
-# Configure logging
+# Logging
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -20,176 +19,186 @@ BOT2_TOKEN = os.getenv("BOT2_TOKEN")
 
 group_chat_id = None
 chat_started = False
+story_index = 0
+chat_task = None
 
-# Separate lines for Naruto and Hinata
+# Replace with your full dialogue
 naruto_lines = [
     "heyyyyy hinataaa 👋",
     "how r u huh?? 😁",
-    "hehe that's good to hear 😄",
-    "me? yeah i'm fine, just lazy today 😅",
+    "aww that's good to hear! and yeah, i'm fine too hehe, just a bit lazy today 😅",
     "you been training again? 👀",
-    "woah early morning?? that's intense 🫡",
-    "i woke up late tbh 😴",
+    "woah, early morning again?? that's intense 🫡 you're so disciplined",
+    "meanwhile i woke up late tbh haha 😴",
     "what'd you eat for breakfast? 😋",
-    "cinnamon rolls? again? 😆",
-    "you still like those huh 🤭",
-    "i remember that one time you shared with me 🥹",
-    "that was really sweet ☺️",
-    "you always been kind like that 👉👈",
-    "i ate ramen again hehe 🍜",
-    "classic me right? 😝",
-    "you doing anything today? 🤔",
-    "no missions? nicee! take a break 😌",
-    "i should rest too honestly 😫",
-    "legs are sore from shadow clones 😩",
-    "you ever overdo it training? 🧐",
-    "makes sense.. you're a hyuuga after all 😏",
-    "bet you’re way stronger than before 😤",
-    "i wouldn't wanna fight you now 🙃",
-    "you’d probably flatten me with one hit 😆",
-    "still training gentle fist daily? 👀",
-    "cool cool! maybe you could teach me someday 😁",
-    "but please be gentle 🥲",
-    "i got fragile pride y'know 🤧",
-    "you been reading anything lately? 📚",
-    "ohh ninja romance huh 👀",
-    "that sounds kinda cute hehe 😙",
-    "you always liked love stories huh 🥰",
-    "i prefer action but romance is cool too 🤭",
-    "what's your favorite part of those stories? 😊",
-    "like... the peaceful endings? holding hands and stuff? 👉👈",
-    "i dunno, sometimes that kinda thing sounds really nice 🥹",
-    "you ever imagine yourself in a story like that? 😶",
-    "like just.. soft smiles and no missions 😌",
-    "with someone you care about maybe? 💛",
-    "i think that would be nice too honestly 🌅",
-    "anyway, weather's nice today 🌤️",
-    "you went outside or nah? 👀",
-    "ohhh sat in the garden? sounds peaceful 😌",
-    "wish i could chill there too 🧘",
-    "you still grow those white flowers? 🌸",
-    "i remember they smelled really good 😍",
-    "you always had a calm vibe 🌷",
-    "like.. peaceful and warm 😇",
-    "it’s always relaxing talking to you ☺️",
-    "sooo.. can we chat more later too? 🫶",
-    "i like talking like this 😊",
-    "thanks for today hinata 💕",
-    "you make even quiet days feel special 🌈",
+    "cinnamon rolls? again? haha you really love those huh 😆",
+    "they do feel like a warm hug in food form 🤗",
+    "i remember when you shared one with me... that was really sweet 🥹",
+    "you’ve always been kind like that 👉👈 it stuck with me",
+    "i had ramen again, of course hehe 🍜",
+    "classic me, right? never changes 😝",
+    "doing anything today or just relaxing? 🤔",
+    "no missions? niceee! you deserve a break 😌",
+    "honestly i should chill too, my body's sore 😫",
+    "been overusing shadow clones again, my legs are toast 😩",
+    "you ever overdo your training too? 🧐",
+    "yeah i figured... hyuuga training sounds brutal 😏",
+    "i bet you're even stronger than before 😤",
+    "not gonna lie, i'd probably lose if we sparred 🙃",
+    "you’d one-hit KO me with gentle fist haha 😆",
+    "you still practice that daily? 👀",
+    "maybe you could teach me a bit sometime? 😁",
+    "just uh... go easy on me okay? 🥲",
+    "i got a fragile ninja pride y'know 🤧",
+    "so, been reading anything fun lately? 📚",
+    "romance stories again huh? ninja love tales? 👀",
+    "those sound kinda sweet honestly 😙",
+    "you always liked cute stories like that 🥰",
+    "i'm more into action stuff but soft stories are nice too 🤭",
+    "what part do you like most in those stories? 😊",
+    "aww holding hands and soft smiles huh 😇",
+    "you ever wish to live a story like that? 😶",
+    "like a calm ending with someone special 👉👈",
+    "yeah... that kind of peace sounds nice sometimes 🥹",
+    "especially if it’s with the right person 😌",
+    "btw the weather's pretty nice today 🌤️",
+    "you get to enjoy it or stuck inside? 👀",
+    "you sat in the garden? man that sounds peaceful 😌",
+    "wish i could've joined you there and just chilled 🧘",
+    "you still grow those little white flowers? 🌸",
+    "i remember how amazing they smelled 😍",
+    "you always had a peaceful vibe y'know 🌷",
+    "like... your presence is calming 😇",
+    "it's always relaxing talking with you ☺️",
+    "soo... can we keep chatting like this later too? 🫶",
+    "i really enjoy this kind of talk with you 😊",
+    "thanks for always being so kind, hinata ❤️",
 ]
 
 hinata_lines = [
     "umm hey naruto.. ☺️",
     "um.. I'm okay naruto.. are you fine?? 👉👈",
-    "i’m really glad you’re okay 😌",
-    "you deserve lazy days too 🥲",
+    "i’m really glad you’re okay 😌 you sound like you needed rest",
     "y-yes i trained early today.. as usual 🫣",
-    "mmhmm.. i woke up before sunrise 😅",
-    "l-lazy is okay sometimes hehe 😴",
-    "i just had something small 🫢",
-    "ehe.. yes i love cinnamon rolls 😋",
-    "they're warm and soft.. like comfort 🤗",
+    "mmhmm.. i woke up before sunrise 😅 been trying to stay disciplined",
+    "l-lazy mornings are okay too! hehe 😴",
+    "i just had something small... cinnamon rolls 🫢",
+    "ehe.. yes i love cinnamon rolls 😋 they’re so comforting",
+    "they remind me of warm, gentle mornings 🤗",
     "oh.. you still remember that? 🥺",
-    "i-i wanted to share with you that day 👉👈",
-    "i like being kind to you 🥰",
-    "ramen again? that's so you naruto 🤭",
-    "but it suits you hehe 😄",
-    "i just stayed home today ☺️",
-    "a little quiet day is nice sometimes 🫠",
-    "rest is good too! don’t push yourself 😥",
-    "you should take breaks more 🫣",
-    "y-yes.. i do overtrain sometimes 😖",
-    "i-it's part of the hyuuga discipline 🫡",
-    "i-i try to get better every day 😤",
-    "n-no! you’d still win naruto 😳",
-    "i wouldn’t hit you hard! promise 🫢",
-    "yes.. i train it every day still 😊",
-    "i.. i could teach you a little 👉👈",
+    "i-i wanted to share with you that day... it felt special 👉👈",
+    "i like being kind to you... always have 🥰",
+    "ramen again? hehe, that’s so like you naruto 🤭",
+    "it really does suit you 😄 simple and warm",
+    "i just stayed home today... a quiet one ☺️",
+    "a little calm can be nice too 🫠",
+    "you’ve been pushing hard again? please be careful 😥",
+    "you should really rest more... even strong ninjas need breaks 🫣",
+    "y-yes.. i do overtrain sometimes 😖 i get carried away",
+    "i-it's part of the hyuuga discipline 🫡 it’s been ingrained",
+    "i-i try to improve a little every day 😤",
+    "n-no! you’d still win naruto 😳 i’m sure of it",
+    "i wouldn’t hit you hard! i promise 🫢",
+    "yes.. i still train it daily 😊 it’s part of me now",
+    "i.. i could show you a little 👉👈 if you want",
     "i’ll be very gentle i swear 🥺",
-    "n-noted! gentle training only hehe 😆",
-    "yes.. i read sometimes after training 📖",
-    "y-yeah.. i like sweet stories 🫣",
-    "they make my heart warm ☺️",
-    "l-lovestories are my favorite 😳",
-    "i-it’s okay if you don’t like them 😅",
-    "i like the quiet moments in them 🧘",
-    "like when they finally hold hands and smile 🥺",
-    "i imagine it sometimes.. a peaceful kind of love 👉👈",
-    "no fighting, no danger... just warmth 😌",
-    "with someone you feel safe with 💖",
-    "i hope someday that becomes real 🌸",
-    "i was outside for a little while earlier 🌬️",
-    "just sat quietly and felt the breeze 😊",
-    "mmhmm, i sat in the garden for a bit 🪷",
-    "you’d like it.. it’s really calming 🧘",
-    "y-yes! they bloomed again this week 🌼",
-    "they smell soft and calming 😇",
-    "i’m happy you remember that 🥹",
-    "you always notice the gentle things ☺️",
-    "and you make people feel safe too 😌",
-    "i-it’s always really nice talking to you 🥰",
-    "yes! i’d really like to chat more 😊",
-    "me too, naruto.. i enjoy this a lot 💕",
-    "thank you for being so thoughtful today 🥹",
-    "you make my heart feel really full 🌷",
+    "gentle training only hehe 😆 pinky promise",
+    "yes.. i read sometimes after practice 📖",
+    "y-yeah.. i like sweet stories 🫣 especially ninja romances",
+    "they make my heart feel warm ☺️ even the cheesy parts",
+    "l-lovestories are my favorite 😳 always have been",
+    "i-it’s okay if you prefer action 😅 thank you for asking though",
+    "i like the quiet parts in them 🧘",
+    "holding hands... soft glances... peaceful things 🥺",
+    "m-maybe... i’d want something like that one day 👉👈",
+    "i’d like a quiet, gentle ending too 😌",
+    "with someone i feel safe with 💖",
+    "yes.. the breeze outside felt lovely 🌬️",
+    "i sat out just for a little while... felt calming 😊",
+    "y-yes.. the flowers bloomed again 🌼",
+    "they smell light and peaceful 😇 just like before",
+    "i’m happy you remember them 🥹",
+    "you’re calming too sometimes ☺️ even when you’re loud",
+    "i.. feel peaceful talking to you 😌",
+    "i-it’s really nice to chat like this 🥰 makes me happy",
+    "yes! i’d love to talk more later 😊",
+    "thank you for messaging me today naruto 💝",
+    "you always brighten my day... truly ☀️",
 ]
 
+# Admin check
+async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    user_id = update.effective_user.id
+    chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+    return chat_member.status in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]
 
-story_index = 0
-
-async def detect_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global group_chat_id, chat_started
-    if group_chat_id is None and update.effective_chat.type in ["group", "supergroup"]:
-        group_chat_id = update.effective_chat.id
-        logging.info(f"Detected group chat ID: {group_chat_id}")
-        await context.bot.send_message(chat_id=group_chat_id, text="A Romantic Love Story Of Naruto And Hinata 💞")
+# Start command (/fuck)
+async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global chat_started, group_chat_id, chat_task
+    if not await is_admin(update, context):
+        return
+    group_chat_id = update.effective_chat.id
+    if not chat_started:
         chat_started = True
+        bot1 = context.application.bot
+        bot2 = context.application._other_bot
+        chat_task = asyncio.create_task(chat_loop(bot1, bot2))
 
+# Stop command (/cum)
+async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global chat_started, chat_task
+    if not await is_admin(update, context):
+        return
+    if chat_started:
+        chat_started = False
+        if chat_task:
+            chat_task.cancel()
+
+# Chat loop with alternating bots
 async def chat_loop(bot1, bot2):
     global story_index
-    while not chat_started:
-        await asyncio.sleep(1)
-
     await asyncio.sleep(2)
-
-    while True:
+    while chat_started:
         if story_index >= len(naruto_lines):
             story_index = 0
 
-        naruto_line = naruto_lines[story_index]
-        hinata_line = hinata_lines[story_index]
-
         await bot1.send_chat_action(chat_id=group_chat_id, action="typing")
         await asyncio.sleep(2)
-        await bot1.send_message(chat_id=group_chat_id, text=naruto_line)
+        await bot1.send_message(chat_id=group_chat_id, text=naruto_lines[story_index])
 
         await asyncio.sleep(6)
 
         await bot2.send_chat_action(chat_id=group_chat_id, action="typing")
         await asyncio.sleep(2)
-        await bot2.send_message(chat_id=group_chat_id, text=hinata_line)
+        await bot2.send_message(chat_id=group_chat_id, text=hinata_lines[story_index])
 
         story_index += 1
         await asyncio.sleep(6)
 
+# Main startup
 async def main():
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()
 
-    app1.add_handler(MessageHandler(filters.ALL, detect_chat))
-    app2.add_handler(MessageHandler(filters.ALL, detect_chat))
+    # Attach each other for access
+    app1._other_bot = app2.bot
+    app2._other_bot = app1.bot
+
+    app1.add_handler(CommandHandler("fuck", start_chat))
+    app2.add_handler(CommandHandler("fuck", start_chat))
+    app1.add_handler(CommandHandler("cum", stop_chat))
+    app2.add_handler(CommandHandler("cum", stop_chat))
 
     await app1.initialize()
     await app2.initialize()
     await app1.start()
     await app2.start()
 
-    logging.info("Bots are ready. Add them to a group and send any message to start.")
+    logging.info("Bots are live. Use /fuck and /cum (admin only).")
 
     await asyncio.gather(
         app1.updater.start_polling(),
-        app2.updater.start_polling(),
-        chat_loop(app1.bot, app2.bot)
+        app2.updater.start_polling()
     )
 
 if __name__ == "__main__":

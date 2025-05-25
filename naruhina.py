@@ -27,8 +27,16 @@ logging.basicConfig(
 # ----------------------------------------
 # Bot tokens (set these in your environment)
 # ----------------------------------------
-BOT1_TOKEN = os.getenv("BOT1_TOKEN")  # Naruto
-BOT2_TOKEN = os.getenv("BOT2_TOKEN")  # Hinata
+BOT1_TOKEN = os.getenv("BOT1_TOKEN")  # Naruto’s token
+BOT2_TOKEN = os.getenv("BOT2_TOKEN")  # Hinata’s token
+
+if not BOT1_TOKEN or not BOT2_TOKEN:
+    logging.error("Both BOT1_TOKEN and BOT2_TOKEN must be set in the environment.")
+    raise RuntimeError("Missing BOT token(s)")
+
+if BOT1_TOKEN.strip() == BOT2_TOKEN.strip():
+    logging.error("BOT1_TOKEN and BOT2_TOKEN are identical. Each bot needs its own token.")
+    raise RuntimeError("BOT1_TOKEN == BOT2_TOKEN")
 
 # ----------------------------------------
 # Shared state for all group chats
@@ -36,7 +44,6 @@ BOT2_TOKEN = os.getenv("BOT2_TOKEN")  # Hinata
 # Keyed by group_chat_id → { "story_index": int, "chat_started": bool, "task": asyncio.Task }
 group_chats: dict[int, dict[str, any]] = {}
 
-# Pre‐written dialogue lines
 naruto_lines = [
     "heyyyyy hinataaa 👋",
     "how r u huh?? 😁",
@@ -64,16 +71,13 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 
 # ----------------------------------------
-# Command: /start in PRIVATE for Naruto (app1)
+# /start handler for Naruto (private)
 # ----------------------------------------
 async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f"[naruto_start_private] called; chat_type={update.effective_chat.type}")
-
-    # Only proceed if truly a private chat
+    logging.info(f"[naruto_start] called; chat_type={update.effective_chat.type!r}")
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
-    # Build the inline‐keyboard
     keyboard = [
         [
             InlineKeyboardButton("Updates", url="https://t.me/WorkGlows"),
@@ -88,29 +92,36 @@ async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Try sending the greeting+keyboard
     try:
         await update.message.reply_text(
             "Hey there! I'm Naruto Uzumaki 😁\n"
             "Add me and Hinata to a group to start our duet chat!",
             reply_markup=reply_markup,
         )
-        logging.info("[naruto_start_private] reply sent successfully.")
+        logging.info("[naruto_start] reply sent successfully.")
     except Exception as exc:
-        logging.error(f"[naruto_start_private] failed to send reply: {exc}")
+        logging.error(f"[naruto_start] failed to send reply: {exc}")
 
 
 # ----------------------------------------
-# Command: /start in PRIVATE for Hinata (app2)
+# Private‐text handler for Naruto
+# ----------------------------------------
+async def naruto_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.type == ChatType.PRIVATE:
+        try:
+            await update.message.reply_text("Yo! I'm Naruto! Need anything? Believe it! 😁")
+        except Exception as exc:
+            logging.error(f"[naruto_private_text] failed to reply: {exc}")
+
+
+# ----------------------------------------
+# /start handler for Hinata (private)
 # ----------------------------------------
 async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logging.info(f"[hinata_start_private] called; chat_type={update.effective_chat.type}")
-
-    # Only proceed if truly a private chat
+    logging.info(f"[hinata_start] called; chat_type={update.effective_chat.type!r}")
     if update.effective_chat.type != ChatType.PRIVATE:
         return
 
-    # Build the inline‐keyboard
     keyboard = [
         [
             InlineKeyboardButton("Updates", url="https://t.me/WorkGlows"),
@@ -125,29 +136,36 @@ async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Try sending the greeting+keyboard
     try:
         await update.message.reply_text(
             "Hi, I'm Hinata... ☺️\n"
             "Add me and Naruto to a group to begin our story.",
             reply_markup=reply_markup,
         )
-        logging.info("[hinata_start_private] reply sent successfully.")
+        logging.info("[hinata_start] reply sent successfully.")
     except Exception as exc:
-        logging.error(f"[hinata_start_private] failed to send reply: {exc}")
+        logging.error(f"[hinata_start] failed to send reply: {exc}")
 
 
 # ----------------------------------------
-# Command: /fuck — start the duo‐chat in THIS group (silent)
+# Private‐text handler for Hinata
 # ----------------------------------------
-async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def hinata_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.type == ChatType.PRIVATE:
+        try:
+            await update.message.reply_text("Umm.. h-hi.. I’m Hinata.. happy to talk to you! ☺️")
+        except Exception as exc:
+            logging.error(f"[hinata_private_text] failed to reply: {exc}")
+
+
+# ----------------------------------------
+# /fuck — start the duet chat in this group (shared)
+# ----------------------------------------
+async def start_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-
-    # Only allow if the user is an admin in this chat
     if not await is_admin(update, context):
         return
 
-    # If we don’t already have this chat in our dict, set it up
     if chat_id not in group_chats or not group_chats[chat_id]["chat_started"]:
         group_chats[chat_id] = {
             "story_index": 0,
@@ -155,23 +173,20 @@ async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "task": None,
         }
 
-        # Retrieve both bot instances
+        # Determine which bot is calling, so we can fetch both bot instances
         bot1 = context.application.bot
         bot2 = context.application._other_bot
 
-        # Launch the looping task for this group
         task = asyncio.create_task(chat_loop(chat_id, bot1, bot2))
         group_chats[chat_id]["task"] = task
-        # → no reply_text (silent start)
+        logging.info(f"[start_duet_chat] duet started in chat {chat_id}")
 
 
 # ----------------------------------------
-# Command: /cum — stop the duo‐chat in THIS group (silent)
+# /cum — stop the duet chat in this group (shared)
 # ----------------------------------------
-async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def stop_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-
-    # Only allow if the user is an admin in this chat
     if not await is_admin(update, context):
         return
 
@@ -181,11 +196,11 @@ async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if task:
             task.cancel()
         del group_chats[chat_id]
-        # → no reply_text (silent stop)
+        logging.info(f"[stop_duet_chat] duet stopped in chat {chat_id}")
 
 
 # ----------------------------------------
-# The per‐group chat loop: alternates Naruto/Hinata lines until stopped
+# The shared chat loop: alternates Naruto/Hinata lines
 # ----------------------------------------
 async def chat_loop(chat_id: int, bot1, bot2):
     await asyncio.sleep(2)
@@ -198,14 +213,14 @@ async def chat_loop(chat_id: int, bot1, bot2):
             idx = 0
         group_chats[chat_id]["story_index"] = idx
 
-        # Naruto typing… then message
+        # Naruto typing → message
         await bot1.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         await asyncio.sleep(2)
         await bot1.send_message(chat_id=chat_id, text=naruto_lines[idx])
 
-        await asyncio.sleep(6)  # pause before Hinata
+        await asyncio.sleep(6)
 
-        # Hinata typing… then message
+        # Hinata typing → message
         await bot2.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         await asyncio.sleep(2)
         await bot2.send_message(chat_id=chat_id, text=hinata_lines[idx])
@@ -215,31 +230,17 @@ async def chat_loop(chat_id: int, bot1, bot2):
 
 
 # ----------------------------------------
-# Private‐chat handler: Naruto replies if messaged in private (any text)
+# Register bot menu commands
 # ----------------------------------------
-async def naruto_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.type == ChatType.PRIVATE:
-        await update.message.reply_text("Yo! I'm Naruto! Need anything? Believe it! 😁")
-
-
-# ----------------------------------------
-# Private‐chat handler: Hinata replies if messaged in private (any text)
-# ----------------------------------------
-async def hinata_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.type == ChatType.PRIVATE:
-        await update.message.reply_text("Umm.. h-hi.. I’m Hinata.. happy to talk to you! ☺️")
-
-
-# ----------------------------------------
-# Register bot menu commands (so typing “/” will show them)
-# ----------------------------------------
-async def set_commands(app):
+async def set_commands(app, bot_label: str):
+    # bot_label is just for logging context ("naruto" or "hinata")
     commands = [
         BotCommand("start", "Show bot intro and links"),
-        BotCommand("fuck", "Start Naruto & Hinata chat in this group"),
-        BotCommand("cum", "Stop the Naruto & Hinata chat"),
+        BotCommand("fuck", "Start duet chat in this group"),
+        BotCommand("cum", "Stop duet chat in this group"),
     ]
     await app.bot.set_my_commands(commands)
+    logging.info(f"[{bot_label}] menu commands registered")
 
 
 # ----------------------------------------
@@ -256,50 +257,55 @@ async def run_app(app):
 # Main entrypoint: build two Application instances
 # ----------------------------------------
 async def main():
-    # Create two separate Application objects—one for Naruto, one for Hinata
-    app1 = ApplicationBuilder().token(BOT1_TOKEN).build()  # Naruto
-    logging.info(f"Naruto starting with token prefix: {BOT1_TOKEN[:5]}…")
-    app2 = ApplicationBuilder().token(BOT2_TOKEN).build()  # Hinata
-    logging.info(f"Hinata starting with token prefix: {BOT2_TOKEN[:5]}…")
+    # Build Naruto’s Application
+    app1 = ApplicationBuilder().token(BOT1_TOKEN).build()
+    logging.info("[naruto] built Application; fetching username…")
+    try:
+        naruto_me = await app1.bot.get_me()
+        logging.info(f"[naruto] Running as @{naruto_me.username} (id={naruto_me.id})")
+    except Exception as e:
+        logging.error(f"[naruto] getMe() failed: {e}")
+        raise
+
+    # Build Hinata’s Application
+    app2 = ApplicationBuilder().token(BOT2_TOKEN).build()
+    logging.info("[hinata] built Application; fetching username…")
+    try:
+        hinata_me = await app2.bot.get_me()
+        logging.info(f"[hinata] Running as @{hinata_me.username} (id={hinata_me.id})")
+    except Exception as e:
+        logging.error(f"[hinata] getMe() failed: {e}")
+        raise
 
     # Let each Application know about the other’s Bot instance
     app1._other_bot = app2.bot
     app2._other_bot = app1.bot
 
     # ─────────────────────────────────────────────────────────────────
-    # Group handlers (both bots share these: /fuck and /cum)
+    # Group handlers (both bots share /fuck and /cum)
     # ─────────────────────────────────────────────────────────────────
     for app in (app1, app2):
-        app.add_handler(
-            CommandHandler("fuck", start_chat, filters=filters.ChatType.GROUPS)
-        )
-        app.add_handler(
-            CommandHandler("cum", stop_chat, filters=filters.ChatType.GROUPS)
-        )
+        app.add_handler(CommandHandler("fuck", start_duet_chat, filters=filters.ChatType.GROUPS))
+        app.add_handler(CommandHandler("cum", stop_duet_chat, filters=filters.ChatType.GROUPS))
 
     # ─────────────────────────────────────────────────────────────────
-    # Private‐chat handlers (each bot separately)
+    # Private‐chat handlers for Naruto
     # ─────────────────────────────────────────────────────────────────
-    # Naruto’s /start and “any text” in PRIVATE
-    app1.add_handler(
-        CommandHandler("start", naruto_start_private)
-    )
-    app1.add_handler(
-        MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, naruto_private)
-    )
+    app1.add_handler(CommandHandler("start", naruto_start_private))
+    app1.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, naruto_private_text))
 
-    # Hinata’s /start and “any text” in PRIVATE
-    app2.add_handler(
-        CommandHandler("start", hinata_start_private)
-    )
-    app2.add_handler(
-        MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, hinata_private)
-    )
+    # ─────────────────────────────────────────────────────────────────
+    # Private‐chat handlers for Hinata
+    # ─────────────────────────────────────────────────────────────────
+    app2.add_handler(CommandHandler("start", hinata_start_private))
+    app2.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, hinata_private_text))
 
-    # Register commands in each bot’s menu and run both
+    # ─────────────────────────────────────────────────────────────────
+    # Register menu commands for both bots and run them
+    # ─────────────────────────────────────────────────────────────────
     await asyncio.gather(
-        set_commands(app1),
-        set_commands(app2),
+        set_commands(app1, "naruto"),
+        set_commands(app2, "hinata"),
         run_app(app1),
         run_app(app2),
     )

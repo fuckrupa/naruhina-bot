@@ -157,23 +157,27 @@ async def stop_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Chat loop with alternating bots
 async def chat_loop(bot1, bot2):
     global story_index
-    await asyncio.sleep(2)
-    while chat_started:
-        if story_index >= len(naruto_lines):
-            story_index = 0
-
-        await bot1.send_chat_action(chat_id=group_chat_id, action="typing")
+    try:
         await asyncio.sleep(2)
-        await bot1.send_message(chat_id=group_chat_id, text=naruto_lines[story_index])
+        while chat_started:
+            if story_index >= len(naruto_lines):
+                story_index = 0
 
-        await asyncio.sleep(6)
+            await bot1.send_chat_action(chat_id=group_chat_id, action="typing")
+            await asyncio.sleep(2)
+            await bot1.send_message(chat_id=group_chat_id, text=naruto_lines[story_index])
 
-        await bot2.send_chat_action(chat_id=group_chat_id, action="typing")
-        await asyncio.sleep(2)
-        await bot2.send_message(chat_id=group_chat_id, text=hinata_lines[story_index])
+            await asyncio.sleep(6)
 
-        story_index += 1
-        await asyncio.sleep(6)
+            await bot2.send_chat_action(chat_id=group_chat_id, action="typing")
+            await asyncio.sleep(2)
+            await bot2.send_message(chat_id=group_chat_id, text=hinata_lines[story_index])
+
+            story_index += 1
+            await asyncio.sleep(6)
+    except asyncio.CancelledError:
+        # Task was cancelled — exit cleanly
+        pass
 
 # Main startup
 async def main():

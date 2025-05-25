@@ -21,8 +21,8 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-BOT1_TOKEN = os.getenv("BOT1_TOKEN")
-BOT2_TOKEN = os.getenv("BOT2_TOKEN")
+BOT1_TOKEN = os.getenv("BOT1_TOKEN")  # Naruto bot
+BOT2_TOKEN = os.getenv("BOT2_TOKEN")  # Hinata bot
 
 group_chat_id = None
 chat_started = False
@@ -133,7 +133,7 @@ hinata_lines = [
     "you always brighten my day... truly ☀️",
 ]
 
-# Admin check
+# Check if user is admin
 async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
     member: ChatMember = await context.bot.get_chat_member(update.effective_chat.id, user_id)
@@ -141,6 +141,12 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 # /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    bot_username = (await context.bot.get_me()).username.lower()
+    if "naruto" in bot_username:
+        greeting = "Hey there! I'm Naruto Uzumaki. Add me to a group with Hinata to start chatting!"
+    else:
+        greeting = "Hi, I'm Hinata... ☺️ I'm happy to chat. Add me to a group with Naruto to begin our story."
+
     keyboard = [
         [
             InlineKeyboardButton("Updates", url="https://t.me/YourChannelUsername"),
@@ -151,11 +157,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "Hey there! I'm a fun Naruto & Hinata chat bot.\n\n"
-        "Add me to your group and use /fuck to start the romantic convo!",
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text(greeting, reply_markup=reply_markup)
 
 # /fuck command (start chat)
 async def start_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -200,7 +202,7 @@ async def chat_loop(bot1, bot2):
         story_index += 1
         await asyncio.sleep(6)
 
-# Register commands
+# Set commands for each bot
 async def set_commands(app):
     commands = [
         BotCommand("start", "Show bot intro and links"),
@@ -209,29 +211,26 @@ async def set_commands(app):
     ]
     await app.bot.set_my_commands(commands)
 
-# Run bot application
+# Start each bot
 async def run_app(app):
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
     await app.updater.idle()
 
-# Main logic
+# Main
 async def main():
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()
 
-    # Link bots
     app1._other_bot = app2.bot
     app2._other_bot = app1.bot
 
-    # Add handlers
     for app in (app1, app2):
         app.add_handler(CommandHandler("start", start_command))
         app.add_handler(CommandHandler("fuck", start_chat))
         app.add_handler(CommandHandler("cum", stop_chat))
 
-    # Set commands and run both apps
     await asyncio.gather(
         set_commands(app1),
         set_commands(app2),
@@ -239,9 +238,5 @@ async def main():
         run_app(app2)
     )
 
-# Entry point
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        print("Bot stopped.")
+    asyncio.run(main())

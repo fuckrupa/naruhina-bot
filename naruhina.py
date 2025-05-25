@@ -14,7 +14,6 @@ chat_started = False
 story_index = 0
 chat_task = None
 
-# Naruto and Hinata lines
 naruto_lines = ["yo hinata!", "how r u?", "you training again?", "ramen time!", "see ya later!"]
 hinata_lines = ["h-hi naruto..", "i'm good t-thank you", "yes i trained early", "you and your ramen hehe", "bye bye!"]
 
@@ -24,14 +23,17 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     member: ChatMember = await context.bot.get_chat_member(update.effective_chat.id, user_id)
     return member.status in [ChatMember.ADMINISTRATOR, ChatMember.OWNER]
 
-# Start command
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    bot_username = (await context.bot.get_me()).username.lower()
-    if "naruto" in bot_username:
-        text = "Hey! I'm Naruto. Add me with Hinata in a group to start our roleplay!"
-    else:
-        text = "Hi, I-I'm Hinata... add me with Naruto in a group to chat."
+# Start command for each bot
+async def naruto_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = "Hey! I'm Naruto. Add me with Hinata in a group to start our roleplay!"
+    await send_start_buttons(update, context, text)
 
+async def hinata_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = "Hi, I-I'm Hinata... add me with Naruto in a group to chat."
+    await send_start_buttons(update, context, text)
+
+async def send_start_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
+    bot_username = (await context.bot.get_me()).username
     keyboard = [
         [InlineKeyboardButton("Add Me", url=f"https://t.me/{bot_username}?startgroup=true")],
         [InlineKeyboardButton("Support", url="https://t.me/your_support")],
@@ -88,21 +90,23 @@ async def set_commands(app: Application):
     ]
     await app.bot.set_my_commands(cmds)
 
-# Launch both bots with one event loop
+# Launch both bots
 async def main():
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()
 
-    # Reference each other's bot
     app1._other_bot = app2.bot
     app2._other_bot = app1.bot
 
+    # Each bot gets its own /start handler
+    app1.add_handler(CommandHandler("start", naruto_start))
+    app2.add_handler(CommandHandler("start", hinata_start))
+
+    # Both bots handle /fuck and /cum
     for app in (app1, app2):
-        app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("fuck", start_chat))
         app.add_handler(CommandHandler("cum", stop_chat))
 
-    # Run both apps concurrently
     await asyncio.gather(
         app1.initialize(), app2.initialize(),
         set_commands(app1), set_commands(app2),

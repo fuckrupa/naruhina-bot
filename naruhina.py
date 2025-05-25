@@ -25,7 +25,7 @@ chat_task = None
 
 # Naruto and Hinata dialogue
 naruto_lines = [
-    "heyyyyy hinataaa 👋",
+    "heyyyyy hinataaa cutie 👋",
     "how r u huh?? 😁",
     "aww that's good to hear! and yeah, i'm fine too hehe, just a bit lazy today 😅",
     "you been training again? 👀",

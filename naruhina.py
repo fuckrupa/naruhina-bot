@@ -12,11 +12,11 @@ from telegram.ext import (
 # Logging
 logging.basicConfig(level=logging.INFO)
 
-BOT1_TOKEN = os.getenv("BOT1_TOKEN")
-BOT2_TOKEN = os.getenv("BOT2_TOKEN")
+BOT1_TOKEN = os.getenv("BOT1_TOKEN")  # Naruto
+BOT2_TOKEN = os.getenv("BOT2_TOKEN")  # Hinata
 DB_FILE = "group_states.db"
 
-# Story lines
+# Dialogue
 naruto_lines = [
     "heyyyyy hinataaa 👋",
     "how r u huh?? 😁",
@@ -29,10 +29,10 @@ hinata_lines = [
     "i’m really glad you’re okay 😌 you sound like you needed rest",
 ]
 
-# Background tasks for each group
+# Background tasks
 running_groups = {}
 
-# Initialize SQLite DB
+# Initialize DB
 async def init_db():
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("""
@@ -44,14 +44,14 @@ async def init_db():
         """)
         await db.commit()
 
-# Utility: Check admin
+# Admin check
 async def is_admin(update: Update) -> bool:
     user_id = update.effective_user.id
     chat = update.effective_chat
     member = await chat.get_member(user_id)
     return member.status in ['administrator', 'creator']
 
-# Command: /startstory
+# Start command
 async def start_story(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return await update.message.reply_text("Only admins can start the story.")
@@ -68,7 +68,7 @@ async def start_story(update: Update, context: ContextTypes.DEFAULT_TYPE):
         running_groups[group_id] = asyncio.create_task(chat_loop(group_id, context.bot, context.bot_data["bot2"]))
         await update.message.reply_text("Story started!")
 
-# Command: /stopstory
+# Stop command
 async def stop_story(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_admin(update):
         return await update.message.reply_text("Only admins can stop the story.")
@@ -83,7 +83,7 @@ async def stop_story(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del running_groups[group_id]
         await update.message.reply_text("Story stopped.")
 
-# Chat loop per group
+# Chat loop
 async def chat_loop(group_id: int, bot1, bot2):
     try:
         while True:
@@ -119,35 +119,27 @@ async def chat_loop(group_id: int, bot1, bot2):
     except asyncio.CancelledError:
         logging.info(f"Chat loop cancelled for group {group_id}")
 
-# Dummy handler to trigger bot presence
+# Dummy handler
 async def detect_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # This handler does nothing but ensures the bot is aware of chat activity
     pass
 
-# Main runner
+# Main
 async def main():
     await init_db()
 
     app1 = ApplicationBuilder().token(BOT1_TOKEN).build()
     app2 = ApplicationBuilder().token(BOT2_TOKEN).build()
+    await app2.initialize()  # Only for using app2.bot
+
     app1.bot_data["bot2"] = app2.bot
 
     app1.add_handler(CommandHandler("startstory", start_story))
     app1.add_handler(CommandHandler("stopstory", stop_story))
     app1.add_handler(MessageHandler(filters.ALL, detect_chat))
-    app2.add_handler(MessageHandler(filters.ALL, detect_chat))
 
-    await app1.initialize()
-    await app2.initialize()
-    await app1.start()
-    await app2.start()
+    logging.info("Bots running. Use /startstory or /stopstory in a group.")
 
-    logging.info("Bots running. Use /startstory or /stopstory in any group.")
-
-    await asyncio.gather(
-        app1.updater.start_polling(),
-        app2.updater.start_polling()
-    )
+    await app1.run_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())

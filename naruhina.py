@@ -2,7 +2,8 @@ import os
 import asyncio
 import logging
 import aiosqlite
-from telegram import Update, ChatAction
+from telegram import Update
+from telegram.constants import ChatAction
 from telegram.ext import (
     ApplicationBuilder, ContextTypes,
     CommandHandler, MessageHandler, filters
@@ -120,7 +121,7 @@ async def chat_loop(group_id: int, bot1, bot2):
 
 # Dummy handler to trigger bot presence
 async def detect_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # This ensures the bot responds to any message
+    # This handler does nothing but ensures the bot is aware of chat activity
     pass
 
 # Main runner

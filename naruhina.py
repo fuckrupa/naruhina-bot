@@ -1175,10 +1175,10 @@ async def chat_loop(chat_id: int, bot1, bot2):
         text = text.strip()
         sender = bot1 if speaker.lower() == 'naruto' else bot2
         await sender.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-        await asyncio.sleep(8)
+        await asyncio.sleep(4)
         await sender.send_message(chat_id=chat_id, text=text)
         group_chats[chat_id]["story_index"] = idx + 1
-        await asyncio.sleep(10)
+        await asyncio.sleep(8)
 
 # ----------------------------------------
 # Register bot menu commands

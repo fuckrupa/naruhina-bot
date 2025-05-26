@@ -1069,21 +1069,28 @@ async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
         ],
         [
             InlineKeyboardButton(
-                "Add Me To Your Group",
+                "Add Me to Your Group",
                 url=f"https://t.me/{(await context.bot.get_me()).username}?startgroup=true"
             )
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Hey there! I'm Naruto Uzumaki 😁\n"
-        "Add me and Hinata to a group to start our duet chat!",
+        "Hey! It's me, Naruto Uzumaki! 😁\n\n"
+        "I can't stop thinking about Hinata... like, ever! She's everything to me—my light, my heart, my everything! 💓💫\n"
+        "I just wanna be close to her, talk to her, smile with her… forever! Please add me and my precious Hinata-chan to your group so we can have our sweet moments together! 🥺💖🍥\n\n"
+        "Come on! Help me get closer to the love of my life! Believe it! 💞🌸",
         reply_markup=reply_markup,
     )
 
 async def naruto_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
-        await update.message.reply_text("Yo! I'm Naruto! Need anything? Believe it! 😁")
+        await update.message.reply_text(
+            "Hey! It's me, Naruto Uzumaki! 😉\n\n"
+            "I miss Hinata-chan so much… I just wanna be near her, talk to her, hear her voice… every second without her feels like forever! 🥺💔\n"
+            "Please… can you add me and my precious Hinata (@HornyHinataBot) to your group? I need her… more than anything… 💞🌸\n"
+            "Let me be close to her, even just a little… I’ll never stop loving her. Believe it! 🍥❤️‍🔥"
+        )
 
 async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != ChatType.PRIVATE:
@@ -1095,21 +1102,29 @@ async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
         ],
         [
             InlineKeyboardButton(
-                "Add Me To Your Group",
+                "Add Me to Your Group",
                 url=f"https://t.me/{(await context.bot.get_me()).username}?startgroup=true"
             )
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "Hi, I'm Hinata... ☺️\n"
-        "Add me and Naruto to a group to begin our story.",
+        "H-Hello... I'm Hinata Hyuga... ☺️\n\n"
+        "I c-can’t stop thinking about Naruto-kun... He’s always in my heart, in my dreams… he means everything to me. 🥺💗\n"
+        "All I want is to be close to him, talk to him, hear his voice... feel his warmth near me... 💞\n"
+        "Please add me and my beloved Naruto-kun to your group, so we can be together again and share our love openly… 🌸🍥\n\n"
+        "Help me stay close to the one I love with all my heart... always. 💓",
         reply_markup=reply_markup,
     )
 
 async def hinata_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
-        await update.message.reply_text("Umm.. h-hi.. I’m Hinata.. happy to talk to you! ☺️")
+        await update.message.reply_text(
+            "U-Umm... h-hi... I-I'm Hinata Hyuga... ☺️👉👈\n\n"
+            "I miss Naruto-kun so much… I think about him every moment… my heart races just imagining him near me... 🥺💗\n"
+            "Please... can you add me and Naruto-kun (@PervyNarutoBot) to your group? I just want to be close to him again… to feel his presence and hear his voice… 🌸💞\n"
+            "Being with him is all I ever want… truly. 💓"
+        )
 
 # ----------------------------------------
 # /fuck — start the duet chat in this group

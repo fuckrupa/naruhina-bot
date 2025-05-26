@@ -89,7 +89,7 @@ Story = [
     "hinata: ughhhh you’re hopeless 🤦‍♀️",
     "naruto: hopeless for youuu 😘",
     "hinata: oh my… naruto 😳",
-    "naruto: hehe gotchaaa 😜"
+    "naruto: hehe gotchaaa 😜",
     "hinata: you're really something, naruto 🙃",
     "naruto: something cute? 😋",
     "hinata: more like something chaotic 😝",

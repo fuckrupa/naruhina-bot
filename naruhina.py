@@ -39,7 +39,7 @@ if BOT1_TOKEN.strip() == BOT2_TOKEN.strip():
 
 group_chats: dict[int, dict[str, any]] = {}
 
-story = [
+Story = [
     "naruto: heyyyyy hinataaa 😁",
     "hinata: umm… naruto… hi ☺️",
     "naruto: what r u doin huh??",

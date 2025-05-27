@@ -170,7 +170,7 @@ async def pause_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
         group_chats[chat_id]["paused"] = True
-        await context.bot.send_message(chat_id=chat_id, text="Chat paused... waiting for the right moment.")
+        await context.bot.send_message(chat_id=chat_id, text="😐")
 
 # ----------------------------------------
 # /rub — resume the duet chat
@@ -182,7 +182,7 @@ async def resume_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
         group_chats[chat_id]["paused"] = False
-        await context.bot.send_message(chat_id=chat_id, text="Resuming their sweet chat...")
+        await context.bot.send_message(chat_id=chat_id, text="😊")
 
 # ----------------------------------------
 # /cum — stop the duet chat in this group

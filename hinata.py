@@ -1,19 +1,38 @@
+# hinata.py
+
 import os
 import asyncio
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatMember, BotCommand
-from telegram.constants import ChatType, ChatAction
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import (
+    Update, ChatMember, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ChatAction
+)
+from telegram.constants import ChatType
+from telegram.ext import (
+    ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
+)
 
-from story import Story, group_chats, chat_loop, is_admin, check_partner_presence, set_commands
+from story import group_chats, chat_loop, is_admin, check_partner_presence, set_commands
 
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+# ----------------------------------------
+# Logging setup
+# ----------------------------------------
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-BOT_TOKEN = os.getenv("BOT2_TOKEN")  # Hinata’s token
-if not BOT_TOKEN:
-    raise RuntimeError("BOT2_TOKEN not set.")
+# ----------------------------------------
+# Bot token (from env)
+# ----------------------------------------
+BOT2_TOKEN = os.getenv("BOT2_TOKEN")
+if not BOT2_TOKEN:
+    logging.error("BOT2_TOKEN must be set")
+    raise RuntimeError("Missing BOT2_TOKEN")
 
-async def start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ----------------------------------------
+# Private‐chat handlers
+# ----------------------------------------
+async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != ChatType.PRIVATE:
         return
     keyboard = [
@@ -30,69 +49,83 @@ async def start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(
         "H-Hello... I'm Hinata Hyuga... ☺️\n\n"
-        "I c-can’t stop thinking about Naruto-kun... He means everything to me. 🥺💗\n"
-        "Please add me and my beloved Naruto-kun to your group, so we can be together again and share our love openly… 🌸🍥",
+        "I c-can’t stop thinking about Naruto-kun... 🥺💗\n"
+        "Please add me and Naruto-kun to your group… 🌸🍥",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-async def private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def hinata_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
         await update.message.reply_text(
-            "I miss Naruto-kun so much… my heart races just imagining him near me... 🥺💗\n"
+            "I miss Naruto-kun so much… 🥺💗\n"
             "Please... add me and Naruto-kun (@PervyNarutoBot) to your group?"
         )
 
+# ----------------------------------------
+# Group‐chat duet handlers
+# ----------------------------------------
 async def start_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if not await is_admin(update, context):
         return
     if chat_id not in group_chats or not group_chats[chat_id]["chat_started"]:
         group_chats[chat_id] = {"story_index": 0, "chat_started": True, "paused": False, "task": None}
-        partner = "Naruto"
-        await check_partner_presence(update, context, partner, is_naruto=False)
+        await check_partner_presence(update, context, "Naruto", is_naruto=False)
         task = asyncio.create_task(chat_loop(chat_id, context.application._other_bot, context.application.bot))
         group_chats[chat_id]["task"] = task
 
 async def pause_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
+    cid = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
-        group_chats[chat_id]["paused"] = True
-        await context.bot.send_message(chat_id=chat_id, text="...")
+    if cid in group_chats and group_chats[cid]["chat_started"]:
+        group_chats[cid]["paused"] = True
+        await context.bot.send_message(chat_id=cid, text="...")
 
 async def resume_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
+    cid = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
-        group_chats[chat_id]["paused"] = False
-        await context.bot.send_message(chat_id=chat_id, text="...")
+    if cid in group_chats and group_chats[cid]["chat_started"]:
+        group_chats[cid]["paused"] = False
+        await context.bot.send_message(chat_id=cid, text="...")
 
 async def stop_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
+    cid = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
-        group_chats[chat_id]["chat_started"] = False
-        task = group_chats[chat_id]["task"]
-        if task:
-            task.cancel()
-        del group_chats[chat_id]
+    if cid in group_chats and group_chats[cid]["chat_started"]:
+        group_chats[cid]["chat_started"] = False
+        t = group_chats[cid]["task"]
+        if t:
+            t.cancel()
+        del group_chats[cid]
 
-async def run():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app._other_bot = None  # will be injected manually in Railway
+# ----------------------------------------
+# Bot startup
+# ----------------------------------------
+async def main():
+    app = ApplicationBuilder().token(BOT2_TOKEN).build()
+    app._other_bot = None  # will be set in main.py
 
-    app.add_handler(CommandHandler("start", start_private))
-    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, private_text))
+    # private
+    app.add_handler(CommandHandler("start", hinata_start_private))
+    app.add_handler(MessageHandler(filters.TEXT & filters.ChatType.PRIVATE, hinata_private_text))
+
+    # group
     app.add_handler(CommandHandler("fuck", start_duet_chat, filters=filters.ChatType.GROUPS))
     app.add_handler(CommandHandler("kiss", pause_duet_chat, filters=filters.ChatType.GROUPS))
     app.add_handler(CommandHandler("rub", resume_duet_chat, filters=filters.ChatType.GROUPS))
     app.add_handler(CommandHandler("cum", stop_duet_chat, filters=filters.ChatType.GROUPS))
 
     await set_commands(app, "hinata")
-    await app.run_polling()
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+    await app.updater.idle()
+
+def run_hinata_bot():
+    asyncio.run(main())
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    run_hinata_bot()

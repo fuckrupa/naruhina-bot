@@ -63,20 +63,21 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
 # Emotional response if only one bot is added
 # ----------------------------------------
 
-async def check_missing_partner(update: Update, context: ContextTypes.DEFAULT_TYPE, self_name: str, partner_name: str):
-    chat_id = update.effective_chat.id
+async def check_partner_presence(update: Update, context: ContextTypes.DEFAULT_TYPE, partner_bot_username: str, is_naruto: bool) -> bool:
+    chat = update.effective_chat
     try:
-        member_list = await context.bot.get_chat_administrators(chat_id)
-        bots = [m.user.username.lower() for m in member_list if m.user.is_bot]
-        if (partner_name.lower() not in bots):
-            msg = (
-                f"{self_name}: I'm useless without {partner_name.capitalize()}...\n"
-                f"Every moment in this group feels empty without their voice, their words...\n"
-                f"Please... add {partner_name} to this group. I need them. I *miss* them... so much."
-            )
-            await context.bot.send_message(chat_id=chat_id, text=msg)
-    except Exception as e:
-        logging.warning(f"[check_missing_partner] failed: {e}")
+        member = await context.bot.get_chat_member(chat.id, partner_bot_username)
+        if member.status not in ["administrator", "member"]:
+            raise Exception()
+        return True
+    except:
+        message = (
+            "I’m useless without her... Without Hinata, I have no reason to speak. Please... bring her to me. 🥺💔"
+            if is_naruto else
+            "I... I can't talk without Naruto-kun. Please... I need him beside me... I feel so lost... 🥺💔"
+        )
+        await update.message.reply_text(message)
+        return False
 
 # ----------------------------------------
 # Handlers for private chats (Naruto & Hinata)

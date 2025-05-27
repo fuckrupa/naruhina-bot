@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from telegram import ChatMember, ChatAction
+from telegram import ChatMember, BotCommand
+from telegram.constants import ChatAction
 from telegram.ext import ContextTypes, Update, Application
-from telegram import BotCommand
 
 Story = [
     "naruto: heyyyyy hinataaa 😁",

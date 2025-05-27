@@ -4,9 +4,9 @@ import os
 import asyncio
 import logging
 from telegram import (
-    Update, ChatMember, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand, ChatAction
+    Update, ChatMember, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 )
-from telegram.constants import ChatType
+from telegram.constants import ChatType, ChatAction
 from telegram.ext import (
     ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 )

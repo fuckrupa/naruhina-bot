@@ -60,24 +60,23 @@ async def is_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         return False
 
 # ----------------------------------------
-# Check if both bots are in the group
+# Emotional response if only one bot is added
 # ----------------------------------------
 
-async def check_partner_presence(update: Update, context: ContextTypes.DEFAULT_TYPE, partner_bot_username: str, is_naruto: bool) -> bool:
-    chat = update.effective_chat
+async def check_missing_partner(update: Update, context: ContextTypes.DEFAULT_TYPE, self_name: str, partner_name: str):
+    chat_id = update.effective_chat.id
     try:
-        member = await context.bot.get_chat_member(chat.id, partner_bot_username)
-        if member.status not in ["administrator", "member"]:
-            raise Exception()
-        return True
-    except:
-        message = (
-            "I’m useless without her... Without Hinata, I have no reason to speak. Please... bring her to me. 🥺💔"
-            if is_naruto else
-            "I... I can't talk without Naruto-kun. Please... I need him beside me... I feel so lost... 🥺💔"
-        )
-        await update.message.reply_text(message)
-        return False
+        member_list = await context.bot.get_chat_administrators(chat_id)
+        bots = [m.user.username.lower() for m in member_list if m.user.is_bot]
+        if (partner_name.lower() not in bots):
+            msg = (
+                f"{self_name}: I'm useless without {partner_name.capitalize()}...\n"
+                f"Every moment in this group feels empty without their voice, their words...\n"
+                f"Please... add {partner_name} to this group. I need them. I *miss* them... so much."
+            )
+            await context.bot.send_message(chat_id=chat_id, text=msg)
+    except Exception as e:
+        logging.warning(f"[check_missing_partner] failed: {e}")
 
 # ----------------------------------------
 # Handlers for private chats (Naruto & Hinata)
@@ -102,18 +101,15 @@ async def naruto_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
     await update.message.reply_text(
         "Hey! It's me, Naruto Uzumaki! 😁\n\n"
         "I can't stop thinking about Hinata... like, ever! She's everything to me—my light, my heart, my everything! 💓💫\n"
-        "I just wanna be close to her, talk to her, smile with her… forever! Please add me and my precious Hinata-chan to your group so we can have our sweet moments together! 🥺💖🍥\n\n"
-        "Come on! Help me get closer to the love of my life! Believe it! 💞🌸",
+        "Please add me and my precious Hinata-chan to your group so we can have our sweet moments together! 🥺💖🍥",
         reply_markup=reply_markup,
     )
 
 async def naruto_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
         await update.message.reply_text(
-            "Hey! It's me, Naruto Uzumaki! 😉\n\n"
-            "I miss Hinata-chan so much… I just wanna be near her, talk to her, hear her voice… every second without her feels like forever! 🥺💔\n"
-            "Please… can you add me and my precious Hinata (@HornyHinataBot) to your group? I need her… more than anything… 💞🌸\n"
-            "Let me be close to her, even just a little… I’ll never stop loving her. Believe it! 🍥❤️‍🔥"
+            "I miss Hinata-chan so much… every second without her feels like forever! 🥺💔\n"
+            "Please… can you add me and my precious Hinata (@HornyHinataBot) to your group?"
         )
 
 async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -134,64 +130,58 @@ async def hinata_start_private(update: Update, context: ContextTypes.DEFAULT_TYP
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "H-Hello... I'm Hinata Hyuga... ☺️\n\n"
-        "I c-can’t stop thinking about Naruto-kun... He’s always in my heart, in my dreams… he means everything to me. 🥺💗\n"
-        "All I want is to be close to him, talk to him, hear his voice... feel his warmth near me... 💞\n"
-        "Please add me and my beloved Naruto-kun to your group, so we can be together again and share our love openly… 🌸🍥\n\n"
-        "Help me stay close to the one I love with all my heart... always. 💓",
+        "I c-can’t stop thinking about Naruto-kun... He means everything to me. 🥺💗\n"
+        "Please add me and my beloved Naruto-kun to your group, so we can be together again and share our love openly… 🌸🍥",
         reply_markup=reply_markup,
     )
 
 async def hinata_private_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == ChatType.PRIVATE:
         await update.message.reply_text(
-            "U-Umm... h-hi... I-I'm Hinata Hyuga... ☺️👉👈\n\n"
-            "I miss Naruto-kun so much… I think about him every moment… my heart races just imagining him near me... 🥺💗\n"
-            "Please... can you add me and Naruto-kun (@PervyNarutoBot) to your group? I just want to be close to him again… to feel his presence and hear his voice… 🌸💞\n"
-            "Being with him is all I ever want… truly. 💓"
+            "I miss Naruto-kun so much… my heart races just imagining him near me... 🥺💗\n"
+            "Please... add me and Naruto-kun (@PervyNarutoBot) to your group?"
         )
 
 # ----------------------------------------
-# /fuck — start/resume duet chat in this group
+# /fuck — start the duet chat in this group
 # ----------------------------------------
 
 async def start_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    bot = await context.bot.get_me()
-    is_naruto = bot.username.lower().startswith("pervy")
-    partner_username = "@HornyHinataBot" if is_naruto else "@PervyNarutoBot"
-    if not await check_partner_presence(update, context, partner_username, is_naruto):
-        return
-    if chat_id not in group_chats:
+    if chat_id not in group_chats or not group_chats[chat_id]["chat_started"]:
         group_chats[chat_id] = {"story_index": 0, "chat_started": True, "paused": False, "task": None}
-        task = asyncio.create_task(chat_loop(chat_id, context.application.bot, context.application._other_bot))
+        bot1 = context.application.bot
+        bot2 = context.application._other_bot
+        task = asyncio.create_task(chat_loop(chat_id, bot1, bot2))
         group_chats[chat_id]["task"] = task
-    else:
-        group_chats[chat_id]["chat_started"] = True
-        group_chats[chat_id]["paused"] = False
+        await check_missing_partner(update, context, "Naruto" if bot1.token == BOT1_TOKEN else "Hinata", "Hinata" if bot1.token == BOT1_TOKEN else "Naruto")
+        logging.info(f"[start_duet_chat] duet started in chat {chat_id}")
 
 # ----------------------------------------
-# /kiss — pause duet chat
+# /kiss — pause the duet chat
 # ----------------------------------------
 
 async def pause_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    if chat_id in group_chats:
+    if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
         group_chats[chat_id]["paused"] = True
+        await context.bot.send_message(chat_id=chat_id, text="Chat paused... waiting for the right moment.")
 
 # ----------------------------------------
-# /rub — resume duet chat
+# /rub — resume the duet chat
 # ----------------------------------------
 
 async def resume_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    if chat_id in group_chats:
+    if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
         group_chats[chat_id]["paused"] = False
+        await context.bot.send_message(chat_id=chat_id, text="Resuming their sweet chat...")
 
 # ----------------------------------------
 # /cum — stop the duet chat in this group
@@ -201,12 +191,13 @@ async def stop_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if not await is_admin(update, context):
         return
-    if chat_id in group_chats:
+    if chat_id in group_chats and group_chats[chat_id]["chat_started"]:
         group_chats[chat_id]["chat_started"] = False
         task = group_chats[chat_id]["task"]
         if task:
             task.cancel()
         del group_chats[chat_id]
+        logging.info(f"[stop_duet_chat] duet stopped in chat {chat_id}")
 
 # ----------------------------------------
 # The shared chat loop: sends Story lines sequentially
@@ -215,10 +206,10 @@ async def stop_duet_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def chat_loop(chat_id: int, bot1, bot2):
     await asyncio.sleep(2)
     while True:
-        if chat_id not in group_chats or not group_chats[chat_id]["chat_started"]:
+        if not (chat_id in group_chats and group_chats[chat_id]["chat_started"]):
             break
-        if group_chats[chat_id]["paused"]:
-            await asyncio.sleep(5)
+        if group_chats[chat_id].get("paused", False):
+            await asyncio.sleep(3)
             continue
         idx = group_chats[chat_id]["story_index"]
         if idx >= len(Story):
@@ -240,10 +231,10 @@ async def chat_loop(chat_id: int, bot1, bot2):
 async def set_commands(app, bot_label: str):
     commands = [
         BotCommand("start", "Show bot intro and links"),
-        BotCommand("fuck", "Start or resume duet chat"),
-        BotCommand("kiss", "Pause duet chat"),
-        BotCommand("rub", "Resume duet chat"),
-        BotCommand("cum", "Stop duet chat"),
+        BotCommand("fuck", "Start duet chat in this group"),
+        BotCommand("kiss", "Pause the duet chat"),
+        BotCommand("rub", "Resume the duet chat"),
+        BotCommand("cum", "Stop duet chat in this group"),
     ]
     await app.bot.set_my_commands(commands)
     logging.info(f"[{bot_label}] menu commands registered")

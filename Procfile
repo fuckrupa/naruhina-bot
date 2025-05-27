@@ -1,1 +1,2 @@
-start: python naruhina.py
+naruto: python naruto.py
+hinata: python hinata.py

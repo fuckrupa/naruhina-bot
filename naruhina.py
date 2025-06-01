@@ -228,7 +228,7 @@ async def handle_start_command(message: Dict[Any, Any], bot: TelegramBot):
                         {"text": "Support", "url": "https://t.me/TheCryptoElders"}
                     ],
                     [
-                        {"text": "Add Me to Your Group", "url": f"https://t.me/YOUR_BOT_USERNAME?startgroup=true"}
+                        {"text": "Add Me to Your Group", "url": f"https://t.me/PervyNarutoBot?startgroup=true"}
                     ]
                 ]
             }
@@ -243,7 +243,7 @@ async def handle_start_command(message: Dict[Any, Any], bot: TelegramBot):
                         {"text": "Support", "url": "https://t.me/TheCryptoElders"}
                     ],
                     [
-                        {"text": "Add Me to Your Group", "url": f"https://t.me/YOUR_BOT_USERNAME?startgroup=true"}
+                        {"text": "Add Me to Your Group", "url": f"https://t.me/HornyHinataBot?startgroup=true"}
                     ]
                 ]
             }
